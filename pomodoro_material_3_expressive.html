@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expressive Pomodoro</title>
+  
+  <!-- Tailwind CSS para la maquetación rápida y moderna -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tipografía Expressive: Outfit y Readex Pro de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Readex+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Iconos de Material Symbols (Rounded) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            display: ['Readex Pro', 'sans-serif'],
+          },
+          borderRadius: {
+            'm3-xs': '4px',
+            'm3-sm': '8px',
+            'm3-md': '12px',
+            'm3-lg': '16px',
+            'm3-xl': '24px',
+            'm3-2xl': '28px',
+            'm3-3xl': '32px',
+          },
+          colors: {
+            // Paleta Material 3 Expressive: Peach/Terracotta (Cálido y enfocado)
+            m3: {
+              primary: '#b04a00',
+              onPrimary: '#ffffff',
+              primaryContainer: '#ffdbcb',
+              onPrimaryContainer: '#3a1200',
+              secondary: '#77574e',
+              onSecondary: '#ffffff',
+              secondaryContainer: '#ffdbcb',
+              onSecondaryContainer: '#2c150f',
+              tertiary: '#6c5d2f',
+              onTertiary: '#ffffff',
+              tertiaryContainer: '#f5e1a7',
+              onTertiaryContainer: '#231b00',
+              background: '#fff8f6',
+              onBackground: '#221a17',
+              surface: '#fff8f6',
+              onSurface: '#221a17',
+              surfaceVariant: '#f5ded6',
+              onSurfaceVariant: '#53433f',
+              outline: '#85736e',
+              surfaceContainerLowest: '#ffffff',
+              surfaceContainerLow: '#fff1ec',
+              surfaceContainer: '#f9ebe6',
+              surfaceContainerHigh: '#f3e5e0',
+              surfaceContainerHighest: '#ede0db',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos personalizados para efectos Material 3 */
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #fff8f6;
+      transition: background-color 0.5s ease;
+    }
+
+    /* Animación de pulsación suave para el temporizador activo */
+    @keyframes pulse-subtle {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .timer-active {
+      animation: pulse-subtle 4s infinite ease-in-out;
+    }
+
+    /* Ocultar barra de scroll estética */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full text-m3-onBackground flex flex-col justify-between overflow-x-hidden selection:bg-m3-primaryContainer selection:text-m3-onPrimaryContainer">
+
+  <!-- Cabecera principal -->
+  <header class="w-full max-w-lg mx-auto px-6 pt-6 flex justify-between items-center z-10">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-rounded text-m3-primary text-3xl">hourglass_empty</span>
+      <h1 class="font-display font-bold text-xl tracking-tight text-m3-onSurface">FocoM3</h1>
+    </div>
+    <div class="flex gap-2">
+      <!-- Botón de Estadísticas rápidas -->
+      <button onclick="toggleStats()" class="p-3 rounded-full hover:bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant transition-all duration-200" title="Estadísticas">
+        <span class="material-symbols-rounded">bar_chart</span>
+      </button>
+      <!-- Botón de Ajustes (Abre Bottom Sheet) -->
+      <button onclick="openSettings()" class="p-3 rounded-full hover:bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant transition-all duration-200" title="Ajustes de Tiempo">
+        <span class="material-symbols-rounded">settings</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal Adaptable -->
+  <main class="flex-1 w-full max-w-lg mx-auto px-6 py-4 flex flex-col justify-center items-center gap-8">
+    
+    <!-- Selector Segmentado de Modos (Estilo Material 3 Expressive) -->
+    <div class="w-full bg-m3-surfaceContainerHigh p-1.5 rounded-m3-3xl flex justify-between gap-1 shadow-inner">
+      <button id="btn-work" onclick="setMode('work')" class="flex-1 py-3 px-2 rounded-m3-2xl font-display font-semibold text-xs md:text-sm text-center transition-all duration-300 bg-m3-primary text-m3-onPrimary shadow-md">
+        💻 Enfoque
+      </button>
+      <button id="btn-short" onclick="setMode('short')" class="flex-1 py-3 px-2 rounded-m3-2xl font-display font-semibold text-xs md:text-sm text-center transition-all duration-300 text-m3-onSurfaceVariant hover:bg-m3-surfaceContainerHighest">
+        ☕ Corto
+      </button>
+      <button id="btn-long" onclick="setMode('long')" class="flex-1 py-3 px-2 rounded-m3-2xl font-display font-semibold text-xs md:text-sm text-center transition-all duration-300 text-m3-onSurfaceVariant hover:bg-m3-surfaceContainerHighest">
+        🌴 Largo
+      </button>
+    </div>
+
+    <!-- Temporizador Circular Expresivo -->
+    <div class="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center">
+      <!-- Círculo de progreso SVG de fondo -->
+      <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <!-- Círculo de fondo (riel) -->
+        <circle class="text-m3-surfaceContainerHighest" stroke-width="6" stroke="currentColor" fill="transparent" r="43" cx="50" cy="50" />
+        <!-- Círculo activo de progreso -->
+        <circle id="progress-bar" class="text-m3-primary transition-all duration-300 ease-out" stroke-width="6" stroke-linecap="round" stroke="currentColor" fill="transparent" r="43" cx="50" cy="50" stroke-dasharray="270" stroke-dashoffset="0" />
+      </svg>
+
+      <!-- Panel central de texto y tiempo -->
+      <div id="timer-container" class="z-10 text-center flex flex-col items-center justify-center bg-m3-surfaceContainerLow w-60 h-60 md:w-68 md:h-68 rounded-full shadow-lg border border-m3-surfaceContainerHighest transition-all duration-300">
+        <span id="timer-label" class="text-xs uppercase tracking-widest font-display font-bold text-m3-primary mb-1">Enfoque</span>
+        <span id="timer-display" class="text-5xl md:text-6xl font-display font-extrabold tracking-tight text-m3-onSurface mb-2 tabular-nums">25:00</span>
+        <span id="timer-task" class="text-xs text-m3-onSurfaceVariant px-4 truncate max-w-[200px]">Sin tarea activa</span>
+      </div>
+    </div>
+
+    <!-- Controles Principales (Estilo FAB y Botones de Acción de Material 3) -->
+    <div class="flex items-center gap-6">
+      <!-- Botón Reiniciar -->
+      <button onclick="resetTimer()" class="w-12 h-12 rounded-full bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md" title="Reiniciar">
+        <span class="material-symbols-rounded">replay</span>
+      </button>
+
+      <!-- Botón Iniciar/Pausar (Grande, Estilo FAB Principal) -->
+      <button id="btn-play-pause" onclick="toggleTimer()" class="w-20 h-20 rounded-m3-3xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl" title="Iniciar">
+        <span id="play-icon" class="material-symbols-rounded text-4xl">play_arrow</span>
+      </button>
+
+      <!-- Botón Siguiente / Saltar modo -->
+      <button onclick="skipTimer()" class="w-12 h-12 rounded-full bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md" title="Siguiente">
+        <span class="material-symbols-rounded">skip_next</span>
+      </button>
+    </div>
+
+    <!-- Sección de Tareas rápidas -->
+    <div class="w-full bg-m3-surfaceContainer rounded-m3-3xl p-5 shadow-sm border border-m3-surfaceContainerHigh">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-display font-bold text-sm text-m3-onSurface">Tareas de hoy</h3>
+        <span id="task-count" class="text-xs font-semibold bg-m3-primaryContainer text-m3-onPrimaryContainer px-2 py-0.5 rounded-full">0 completadas</span>
+      </div>
+      
+      <!-- Entrada de nueva tarea -->
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="new-task-input" placeholder="¿En qué vas a trabajar?" class="flex-1 bg-m3-surfaceContainerLow border border-m3-outline/20 rounded-m3-xl px-4 py-2.5 text-sm focus:outline-none focus:border-m3-primary transition-colors text-m3-onSurface">
+        <button onclick="addTask()" class="bg-m3-primary text-m3-onPrimary w-10 h-10 rounded-m3-xl flex items-center justify-center hover:bg-m3-primary/90 transition-colors">
+          <span class="material-symbols-rounded">add</span>
+        </button>
+      </div>
+
+      <!-- Lista de tareas -->
+      <div id="tasks-list" class="space-y-2 max-h-32 overflow-y-auto no-scrollbar">
+        <!-- Generación dinámica de tareas -->
+        <p id="no-tasks" class="text-xs text-center text-m3-onSurfaceVariant/70 py-4">No tienes tareas agregadas aún. ¡Añade una para empezar!</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer con recordatorio o frase motivadora -->
+  <footer class="w-full text-center py-4 text-xs text-m3-onSurfaceVariant/60">
+    Motor M3
+  </footer>
+
+  <!-- ================= AJUSTES MODAL (BOTTOM SHEET) ================= -->
+  <div id="settings-sheet" class="fixed inset-0 bg-black/40 z-50 flex items-end justify-center opacity-0 pointer-events-none transition-all duration-300">
+    <!-- Fondo táctil para cerrar -->
+    <div class="absolute inset-0" onclick="closeSettings()"></div>
+    
+    <!-- Contenido del Bottom Sheet -->
+    <div id="settings-content" class="relative bg-m3-surfaceContainerLowest w-full max-w-lg rounded-t-m3-3xl p-6 shadow-2xl transform translate-y-full transition-transform duration-300 flex flex-col gap-6">
+      
+      <!-- Indicador de arrastre estético M3 -->
+      <div class="w-12 h-1.5 bg-m3-outline/30 rounded-full mx-auto -mt-2 mb-2"></div>
+      
+      <div class="flex justify-between items-center">
+        <h2 class="font-display font-bold text-lg text-m3-onSurface">Ajustes de tiempo (minutos)</h2>
+        <button onclick="closeSettings()" class="p-1 rounded-full hover:bg-m3-surfaceContainerHigh">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <!-- Formularios de tiempos -->
+      <div class="grid grid-cols-3 gap-3">
+        <!-- Tiempo de enfoque -->
+        <div class="bg-m3-surfaceContainer rounded-m3-2xl p-3 text-center">
+          <label class="block text-xs font-semibold text-m3-onSurfaceVariant mb-1">💻 Enfoque</label>
+          <input type="number" id="input-work" min="1" max="120" value="25" class="w-full text-center bg-m3-surfaceContainerLowest rounded-m3-lg p-2 font-display font-bold text-lg text-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary">
+        </div>
+        <!-- Descanso corto -->
+        <div class="bg-m3-surfaceContainer rounded-m3-2xl p-3 text-center">
+          <label class="block text-xs font-semibold text-m3-onSurfaceVariant mb-1">☕ Corto</label>
+          <input type="number" id="input-short" min="1" max="60" value="5" class="w-full text-center bg-m3-surfaceContainerLowest rounded-m3-lg p-2 font-display font-bold text-lg text-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary">
+        </div>
+        <!-- Descanso largo -->
+        <div class="bg-m3-surfaceContainer rounded-m3-2xl p-3 text-center">
+          <label class="block text-xs font-semibold text-m3-onSurfaceVariant mb-1">🌴 Largo</label>
+          <input type="number" id="input-long" min="1" max="120" value="15" class="w-full text-center bg-m3-surfaceContainerLowest rounded-m3-lg p-2 font-display font-bold text-lg text-m3-primary focus:outline-none focus:ring-2 focus:ring-m3-primary">
+        </div>
+      </div>
+
+      <!-- Opciones de audio / Alertas -->
+      <div class="flex items-center justify-between bg-m3-surfaceContainer rounded-m3-2xl p-4">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-rounded text-m3-primary">notifications_active</span>
+          <div>
+            <p class="text-sm font-semibold text-m3-onSurface">Sonido zen al terminar</p>
+            <p class="text-xs text-m3-onSurfaceVariant">Campana sutil generada por el navegador</p>
+          </div>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="sound-toggle" checked class="sr-only peer">
+          <div class="w-11 h-6 bg-m3-surfaceContainerHighest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-m3-outline after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-m3-primary peer-checked:after:bg-m3-onPrimary"></div>
+        </label>
+      </div>
+
+      <!-- Botón de guardar cambios -->
+      <button onclick="saveSettings()" class="w-full bg-m3-primary text-m3-onPrimary font-display font-bold py-3 rounded-m3-3xl hover:bg-m3-primary/90 active:scale-[0.98] transition-all shadow-md">
+        Guardar Ajustes
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= ESTADÍSTICAS MODAL (DIÁLOGO) ================= -->
+  <div id="stats-dialog" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-6">
+    <div class="absolute inset-0" onclick="toggleStats()"></div>
+    <div class="relative bg-m3-surfaceContainerLowest w-full max-w-sm rounded-m3-3xl p-6 shadow-2xl transform scale-90 transition-all duration-300 flex flex-col gap-5">
+      <div class="flex justify-between items-center">
+        <h2 class="font-display font-bold text-lg text-m3-onSurface flex items-center gap-2">
+          <span class="material-symbols-rounded text-m3-primary">trending_up</span>
+          Rendimiento
+        </h2>
+        <button onclick="toggleStats()" class="p-1 rounded-full hover:bg-m3-surfaceContainerHigh">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <!-- Resumen rápido de estadísticas -->
+      <div class="space-y-3">
+        <div class="flex justify-between items-center p-3 bg-m3-surfaceContainer rounded-m3-xl">
+          <span class="text-sm text-m3-onSurfaceVariant">Intervalos de enfoque:</span>
+          <span id="stat-work-count" class="font-display font-bold text-m3-primary">0</span>
+        </div>
+        <div class="flex justify-between items-center p-3 bg-m3-surfaceContainer rounded-m3-xl">
+          <span class="text-sm text-m3-onSurfaceVariant">Tiempo total enfocado:</span>
+          <span id="stat-time-total" class="font-display font-bold text-m3-primary">0 min</span>
+        </div>
+        <div class="flex justify-between items-center p-3 bg-m3-surfaceContainer rounded-m3-xl">
+          <span class="text-sm text-m3-onSurfaceVariant">Descansos completados:</span>
+          <span id="stat-break-count" class="font-display font-bold text-m3-primary">0</span>
+        </div>
+      </div>
+
+      <button onclick="resetStats()" class="text-xs text-center text-red-600 hover:underline">
+        Reiniciar estadísticas de hoy
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor flotante de notificaciones/toasts de Material 3 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-m3-onSurface text-m3-surfaceContainerLowest px-4 py-3 rounded-m3-xl text-xs font-semibold shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+    <span class="material-symbols-rounded text-sm">info</span>
+    <span id="toast-text">Mensaje</span>
+  </div>
+
+  <!-- Lógica de la aplicación con JavaScript -->
+  <script>
+    // Configuración por defecto (en minutos)
+    let times = {
+      work: 25,
+      short: 5,
+      long: 15
+    };
+
+    let currentMode = 'work'; // 'work', 'short', 'long'
+    let timeLeft = times.work * 60; // tiempo restante en segundos
+    let timerInterval = null;
+    let isRunning = false;
+
+    // Estadísticas locales guardadas en memoria de sesión
+    let stats = {
+      workSessions: 0,
+      totalMinutes: 0,
+      breaks: 0
+    };
+
+    // Tareas por defecto
+    let tasks = [
+      { id: 1, text: "Configurar switch virtual en Linux", completed: false },
+      { id: 2, text: "Consultas SQL con JOIN", completed: false }
+    ];
+    let selectedTaskId = null;
+
+    // Inicialización del audio contextual del navegador para la campana zen
+    let audioCtx = null;
+
+    window.onload = function() {
+      // Cargamos configuraciones
+      loadSettingsFromInputs();
+      resetTimer();
+      renderTasks();
+      updateStatsUI();
+    };
+
+    // Actualiza el indicador visual y de texto del temporizador
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      const displayString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      document.getElementById('timer-display').textContent = displayString;
+      document.title = `${displayString} | FocoM3`;
+
+      // Calcular porcentaje de la barra de progreso
+      const maxSeconds = times[currentMode] * 60;
+      const elapsed = maxSeconds - timeLeft;
+      const percentage = (elapsed / maxSeconds) * 270; // 270 es el valor de dasharray del círculo
+      
+      const progressBar = document.getElementById('progress-bar');
+      progressBar.style.strokeDashoffset = percentage;
+    }
+
+    // Cambia el modo actual ('work', 'short', 'long')
+    function setMode(mode) {
+      if (isRunning) {
+        pauseTimer();
+      }
+      
+      currentMode = mode;
+      timeLeft = times[currentMode] * 60;
+      
+      // Actualizar estilos de los botones segmentados
+      const modes = ['work', 'short', 'long'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`btn-${m}`);
+        if (m === mode) {
+          btn.className = "flex-1 py-3 px-2 rounded-m3-2xl font-display font-semibold text-xs md:text-sm text-center transition-all duration-300 bg-m3-primary text-m3-onPrimary shadow-md";
+        } else {
+          btn.className = "flex-1 py-3 px-2 rounded-m3-2xl font-display font-semibold text-xs md:text-sm text-center transition-all duration-300 text-m3-onSurfaceVariant hover:bg-m3-surfaceContainerHighest";
+        }
+      });
+
+      // Actualizar colores dinámicos del cuerpo del temporizador para feedback intuitivo
+      const timerContainer = document.getElementById('timer-container');
+      const label = document.getElementById('timer-label');
+      
+      if (mode === 'work') {
+        label.textContent = "Enfoque";
+        timerContainer.style.backgroundColor = "var(--color-m3-surfaceContainerLow, #f9ebe6)";
+      } else if (mode === 'short') {
+        label.textContent = "Descanso Corto";
+        timerContainer.style.backgroundColor = "#e8f4f1"; // Tinte verde relajante para descansos
+      } else {
+        label.textContent = "Descanso Largo";
+        timerContainer.style.backgroundColor = "#eaf0f6"; // Tinte azul profundo para descansos largos
+      }
+
+      updateDisplay();
+    }
+
+    // Iniciar o pausar el temporizador
+    function toggleTimer() {
+      if (isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      document.getElementById('play-icon').textContent = 'pause';
+      document.getElementById('btn-play-pause').className = "w-20 h-20 rounded-m3-3xl bg-m3-primary text-m3-onPrimary flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl";
+      document.getElementById('timer-container').classList.add('timer-active');
+
+      timerInterval = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          updateDisplay();
+        } else {
+          handleSessionCompletion();
+        }
+      }, 1000);
+
+      showToast("¡Temporizador en marcha!");
+    }
+
+    function pauseTimer() {
+      if (!isRunning) return;
+      
+      isRunning = false;
+      clearInterval(timerInterval);
+      document.getElementById('play-icon').textContent = 'play_arrow';
+      document.getElementById('btn-play-pause').className = "w-20 h-20 rounded-m3-3xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl";
+      document.getElementById('timer-container').classList.remove('timer-active');
+      
+      showToast("Temporizador pausado.");
+    }
+
+    // Reinicia el temporizador actual a su valor original
+    function resetTimer() {
+      pauseTimer();
+      timeLeft = times[currentMode] * 60;
+      updateDisplay();
+    }
+
+    // Salta al siguiente intervalo de forma inteligente
+    function skipTimer() {
+      if (currentMode === 'work') {
+        // Sugiere descanso corto
+        setMode('short');
+        showToast("Saltado al Descanso Corto");
+      } else {
+        setMode('work');
+        showToast("Saltado al período de Enfoque");
+      }
+    }
+
+    // Acción al terminar la cuenta atrás (Campana + cambio de modo automático)
+    function handleSessionCompletion() {
+      pauseTimer();
+      playZenChime();
+
+      if (currentMode === 'work') {
+        stats.workSessions++;
+        stats.totalMinutes += times.work;
+        showToast("🎉 ¡Sesión de enfoque terminada! Tómate un respiro.");
+        
+        // Si hay una tarea seleccionada como activa, podemos dar opción a completarla
+        if (selectedTaskId) {
+          markTaskAsCompleted(selectedTaskId);
+        }
+
+        // Sugerir descanso automáticamente
+        if (stats.workSessions % 4 === 0) {
+          setMode('long');
+        } else {
+          setMode('short');
+        }
+      } else {
+        stats.breaks++;
+        showToast("☕ Descanso terminado. ¡A por la siguiente sesión!");
+        setMode('work');
+      }
+
+      updateStatsUI();
+    }
+
+    // Reproduce un sonido de campana budista/zen sintetizado mediante código (Web Audio API)
+    function playZenChime() {
+      const soundEnabled = document.getElementById('sound-toggle').checked;
+      if (!soundEnabled) return;
+
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        const now = audioCtx.currentTime;
+        
+        // Crear un oscilador sutil simulando un tazón tibetano o campana
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        // Mezcla de frecuencias armónicas para simular metal
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now); // Frecuencia principal (La)
+        osc.frequency.exponentialRampToValueAtTime(110, now + 1.5);
+
+        // Volumen y caída progresiva (Zen decay)
+        gainNode.gain.setValueAtTime(0.5, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 3);
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 3);
+
+        // Añadir una segunda frecuencia armónica más alta para mayor riqueza acústica
+        const harmonic = audioCtx.createOscillator();
+        const harmGain = audioCtx.createGain();
+        harmonic.type = 'triangle';
+        harmonic.frequency.setValueAtTime(880, now);
+        harmGain.gain.setValueAtTime(0.15, now);
+        harmGain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+        
+        harmonic.connect(harmGain);
+        harmGain.connect(audioCtx.destination);
+        harmonic.start(now);
+        harmonic.stop(now + 1.5);
+
+      } catch (e) {
+        console.log("El navegador bloqueó la inicialización de audio automática inicial o no es compatible.", e);
+      }
+    }
+
+    // ================= SECCIÓN GESTIÓN DE TAREAS =================
+
+    function renderTasks() {
+      const tasksList = document.getElementById('tasks-list');
+      const noTasks = document.getElementById('no-tasks');
+      tasksList.innerHTML = '';
+
+      if (tasks.length === 0) {
+        noTasks.style.display = 'block';
+        document.getElementById('timer-task').textContent = "Sin tarea activa";
+        selectedTaskId = null;
+        return;
+      }
+
+      noTasks.style.display = 'none';
+      let completedCount = 0;
+
+      tasks.forEach(task => {
+        if (task.completed) completedCount++;
+
+        const taskItem = document.createElement('div');
+        taskItem.className = `flex items-center justify-between p-3 rounded-m3-xl transition-all border ${
+          task.id === selectedTaskId 
+          ? 'bg-m3-primaryContainer border-m3-primary text-m3-onPrimaryContainer' 
+          : 'bg-m3-surfaceContainerLow border-transparent text-m3-onSurface'
+        } hover:border-m3-outline/20 cursor-pointer`;
+        
+        taskItem.innerHTML = `
+          <div class="flex items-center gap-3 flex-1 min-w-0" onclick="selectTask(${task.id})">
+            <button onclick="event.stopPropagation(); toggleTaskCompletion(${task.id})" class="flex items-center justify-center text-m3-primary focus:outline-none">
+              <span class="material-symbols-rounded">
+                ${task.completed ? 'check_box' : 'check_box_outline_blank'}
+              </span>
+            </button>
+            <span class="text-sm truncate ${task.completed ? 'line-through text-m3-onSurfaceVariant/50' : ''}">${task.text}</span>
+          </div>
+          <button onclick="event.stopPropagation(); deleteTask(${task.id})" class="text-m3-onSurfaceVariant/40 hover:text-red-600 transition-colors p-1" title="Eliminar tarea">
+            <span class="material-symbols-rounded text-lg">delete</span>
+          </button>
+        `;
+        
+        tasksList.appendChild(taskItem);
+      });
+
+      document.getElementById('task-count').textContent = `${completedCount}/${tasks.length} completadas`;
+      
+      // Actualizar label de tarea en curso en el reloj
+      const activeTask = tasks.find(t => t.id === selectedTaskId);
+      if (activeTask) {
+        document.getElementById('timer-task').innerHTML = `<span class="font-bold">Trabajando en:</span> ${activeTask.text}`;
+      } else {
+        document.getElementById('timer-task').textContent = "Haz clic en una tarea para enfocarla";
+      }
+    }
+
+    function addTask() {
+      const input = document.getElementById('new-task-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const newTask = {
+        id: Date.now(),
+        text: text,
+        completed: false
+      };
+
+      tasks.push(newTask);
+      input.value = '';
+      
+      // Si no hay tarea seleccionada previamente, seleccionamos esta nueva
+      if (!selectedTaskId) {
+        selectedTaskId = newTask.id;
+      }
+
+      renderTasks();
+      showToast("Tarea añadida");
+    }
+
+    // Alternar el estado de completado de una tarea
+    function toggleTaskCompletion(id) {
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          const newState = !task.completed;
+          if (newState) showToast("✓ Tarea completada");
+          return { ...task, completed: newState };
+        }
+        return task;
+      });
+      renderTasks();
+    }
+
+    function markTaskAsCompleted(id) {
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          return { ...task, completed: true };
+        }
+        return task;
+      });
+      renderTasks();
+    }
+
+    function selectTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task && task.completed) return; // No seleccionar tareas completadas
+      
+      if (selectedTaskId === id) {
+        selectedTaskId = null; // deseleccionar
+      } else {
+        selectedTaskId = id;
+      }
+      renderTasks();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(task => task.id !== id);
+      if (selectedTaskId === id) {
+        selectedTaskId = null;
+      }
+      renderTasks();
+      showToast("Tarea eliminada");
+    }
+
+
+    // ================= AJUSTES Y DIÁLOGOS =================
+
+    function openSettings() {
+      const sheet = document.getElementById('settings-sheet');
+      const content = document.getElementById('settings-content');
+      
+      sheet.classList.remove('pointer-events-none');
+      sheet.style.opacity = '1';
+      content.style.transform = 'translateY(0)';
+    }
+
+    function closeSettings() {
+      const sheet = document.getElementById('settings-sheet');
+      const content = document.getElementById('settings-content');
+      
+      content.style.transform = 'translateY(100%)';
+      sheet.style.opacity = '0';
+      sheet.classList.add('pointer-events-none');
+    }
+
+    function loadSettingsFromInputs() {
+      times.work = parseInt(document.getElementById('input-work').value) || 25;
+      times.short = parseInt(document.getElementById('input-short').value) || 5;
+      times.long = parseInt(document.getElementById('input-long').value) || 15;
+    }
+
+    function saveSettings() {
+      loadSettingsFromInputs();
+      closeSettings();
+      resetTimer();
+      showToast("Ajustes de tiempo guardados");
+    }
+
+    // Control de Diálogo de Estadísticas
+    function toggleStats() {
+      const dialog = document.getElementById('stats-dialog');
+      const container = dialog.querySelector('.relative');
+      
+      if (dialog.classList.contains('pointer-events-none')) {
+        dialog.classList.remove('pointer-events-none');
+        dialog.style.opacity = '1';
+        container.style.transform = 'scale(1)';
+      } else {
+        container.style.transform = 'scale(0.9)';
+        dialog.style.opacity = '0';
+        dialog.classList.add('pointer-events-none');
+      }
+    }
+
+    function updateStatsUI() {
+      document.getElementById('stat-work-count').textContent = stats.workSessions;
+      document.getElementById('stat-time-total').textContent = `${stats.totalMinutes} min`;
+      document.getElementById('stat-break-count').textContent = stats.breaks;
+    }
+
+    function resetStats() {
+      stats.workSessions = 0;
+      stats.totalMinutes = 0;
+      stats.breaks = 0;
+      updateStatsUI();
+      showToast("Estadísticas reiniciadas");
+      toggleStats();
+    }
+
+    // Mostrar notificaciones Toast sutiles de Material 3
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = message;
+      
+      toast.style.opacity = '1';
+      toast.classList.remove('pointer-events-none');
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.classList.add('pointer-events-none');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
